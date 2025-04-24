@@ -10,7 +10,7 @@ const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
-//Apply rate limiter
+//rate limiter
 app.use(limiter);
 app.use(express.json());
 

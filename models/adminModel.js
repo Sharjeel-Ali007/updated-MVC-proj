@@ -2,11 +2,10 @@ const db = require("../db/db");
 
 const Admin = {
   create: (name, email, password, photo, callback) => {
-    db.query(
-      "INSERT INTO admins (name, email, password, photo) VALUES (?, ?, ?, ?)",
-      [name, email, password, photo],
-      callback
-    );
+    const query = `
+      INSERT INTO admins (name, email, password, photo)
+      VALUES (?, ?, ?, ?)`;
+    db.query(query, [name, email, password, photo], callback);
   },
 
   findByEmail: (email, callback) => {
@@ -14,7 +13,7 @@ const Admin = {
   },
 
   getAll: (callback) => {
-    db.query("SELECT * FROM admins", callback);
+    db.query("SELECT id, name, email, photo FROM admins", callback);
   },
 };
 

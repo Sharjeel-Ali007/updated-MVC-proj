@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const studentController = require("../controllers/studentController");
-const { authenticate, authorizeRole } = require("../middleware/auth"); // Import the middleware
+const { authenticate, authorizeRole } = require("../middleware/auth");
 const upload = require("../middleware/upload");
 
 // authenticate middleware for all routes
