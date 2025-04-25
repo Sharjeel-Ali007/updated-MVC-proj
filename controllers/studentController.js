@@ -1,17 +1,32 @@
 const Student = require("../models/studentModel");
 const Grade = require("../models/gradeModel");
+const redisClient = require("../redis/redisClient");
 
-exports.getAllStudents = (req, res) => {
+exports.getAllStudents = async (req, res) => {
   if (req.user.role !== "admin")
     return res.status(403).send("Only admins can access all students");
 
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
+  const cacheKey = `all_students_page_${page}_limit_${limit}`;
 
-  Student.getAll(page, limit, (err, result) => {
-    if (err) return res.status(500).send("Error fetching students");
-    res.send(result);
-  });
+  try {
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      console.log("Serving from Redis cache");
+      return res.send(JSON.parse(cachedData));
+    }
+
+    Student.getAll(page, limit, async (err, result) => {
+      if (err) return res.status(500).send("Error fetching students");
+      // cache for 60s
+      await redisClient.setEx(cacheKey, 60, JSON.stringify(result));
+      res.send(result);
+    });
+  } catch (err) {
+    console.error("Redis error:", err);
+    res.status(500).send("Server error with Redis");
+  }
 };
 
 exports.getStudentById = (req, res) => {
@@ -45,10 +60,20 @@ exports.createStudent = (req, res) => {
 
     const gradeId = gradeData[0].id;
 
-    Student.create(name, age, gradeId, email, photo, adminId, (err, result) => {
-      if (err) return res.status(500).send("Error creating student");
-      res.send(result);
-    });
+    Student.create(
+      name,
+      age,
+      gradeId,
+      email,
+      photo,
+      adminId,
+      async (err, result) => {
+        if (err) return res.status(500).send("Error creating student");
+        // clear cache
+        await redisClient.flushAll();
+        res.send(result);
+      }
+    );
   });
 };
 
@@ -73,8 +98,10 @@ exports.updateStudent = (req, res) => {
       age,
       gradeId,
       photo,
-      (err, result) => {
+      async (err, result) => {
         if (err) return res.status(500).send("Error updating student");
+        // clear cache
+        await redisClient.flushAll();
         res.send(result);
       }
     );
@@ -82,8 +109,10 @@ exports.updateStudent = (req, res) => {
 };
 
 exports.deleteStudent = (req, res) => {
-  Student.delete(req.params.id, (err, result) => {
+  Student.delete(req.params.id, async (err, result) => {
     if (err) return res.status(500).send("Error deleting student");
+    // clear cache
+    await redisClient.flushAll();
     res.send("Student deleted");
   });
 };

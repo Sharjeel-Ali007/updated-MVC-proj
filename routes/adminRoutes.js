@@ -21,8 +21,6 @@ router.post(
   adminController.register
 );
 
-//
-
 router.post("/login", adminController.login);
 
 router.get(
